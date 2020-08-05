@@ -63,7 +63,7 @@ public class DUPHA
      //small unique random file
      
       System.out.println("generating test files...");
-      for(int i = 0; i < 20000; i++)
+      for(int i = 0; i < 1000; i++)
       {
          try{
             File outFile = new File("TestFile_"+i+".txt"); // 
@@ -212,20 +212,20 @@ public class DUPHA
    
    static byte oldBytes[] = {
    
-   (byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,
-   (byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,
-   (byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,
-   (byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,
-   (byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,
-   (byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,
-   (byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,
+      (byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,
+      (byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,
+      (byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,
+      (byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,
+      (byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,
+      (byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,
+      (byte)0x00,(byte)0x00,(byte)0x00,(byte)0x00,
    };
 
    public static void main(String[] args)
    {
       //get and convert policy partition list, data partitions
       try{
-         hashgen("small.txt");
+         hashgen("d_test.txt");
       } 
       catch(IOException e){
       
@@ -296,6 +296,13 @@ public class DUPHA
    
    private static String hashgen(String filename) throws IOException
    {
+   
+      //reset old bytes
+      for(int i = 0; i < oldBytes.length; i++)
+      {
+         oldBytes[i] = 0x00;
+      }
+   
       //64bytes = 512 bits
       //Creating FileInputStream object
       File file = new File(filename);
@@ -305,6 +312,7 @@ public class DUPHA
       for(int i = 0; i < loopControl; i++)
       {
          byte bytes[] = new byte[64];
+         
       
          fis.read(bytes,0,64); 
       
@@ -421,12 +429,27 @@ public class DUPHA
          //round step 3: MixColumns
          
          //DUPHA does not call out any column matrix multiplication
+         //we do it anyway b/c this is mainly responsible for diffusion of our hash
+         //to meet the 8x8 matrix need we use the following expanded Rijndael matrix
+         //http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.301.7842&rep=rep1&type=pdf
+            for(int k = 0; k < 8; k++)
+            {
+
+               shiftBytes[k] = (byte)((0x01*shiftColBytes[k] + 0x03*shiftColBytes[k+8] +0x04*shiftColBytes[k+8*2] +0x05*shiftColBytes[k+8*3] +0x06*shiftColBytes[k+8*4] +0x08*shiftColBytes[k+8*5] +0x0B*shiftColBytes[k+8*6] +0x07*shiftColBytes[k+8*7]) % 0xFF);//shiftBytes[];      //shiftAmount
+               shiftBytes[k+8] = (byte)((0x03*shiftColBytes[k] + 0x01*shiftColBytes[k+8] +0x05*shiftColBytes[k+8*2] +0x04*shiftColBytes[k+8*3] +0x08*shiftColBytes[k+8*4] +0x06*shiftColBytes[k+8*5] +0x07*shiftColBytes[k+8*6] +0x0B*shiftColBytes[k+8*7]) % 0xFF);
+               shiftBytes[k+8*2] = (byte)((0x04*shiftColBytes[k] + 0x05*shiftColBytes[k+8] +0x01*shiftColBytes[k+8*2] +0x03*shiftColBytes[k+8*3] +0x0B*shiftColBytes[k+8*4] +0x07*shiftColBytes[k+8*5] +0x06*shiftColBytes[k+8*6] +0x08*shiftColBytes[k+8*7]) % 0xFF);
+               shiftBytes[k+8*3] = (byte)((0x05*shiftColBytes[k] + 0x04*shiftColBytes[k+8] +0x03*shiftColBytes[k+8*2] +0x01*shiftColBytes[k+8*3] +0x07*shiftColBytes[k+8*4] +0x0b*shiftColBytes[k+8*5] +0x08*shiftColBytes[k+8*6] +0x06*shiftColBytes[k+8*7]) % 0xFF);
+               shiftBytes[k+8*4] = (byte)((0x06*shiftColBytes[k] + 0x08*shiftColBytes[k+8] +0x0b*shiftColBytes[k+8*2] +0x07*shiftColBytes[k+8*3] +0x01*shiftColBytes[k+8*4] +0x03*shiftColBytes[k+8*5] +0x04*shiftColBytes[k+8*6] +0x05*shiftColBytes[k+8*7]) % 0xFF);
+               shiftBytes[k+8*5] = (byte)((0x08*shiftColBytes[k] + 0x06*shiftColBytes[k+8] +0x07*shiftColBytes[k+8*2] +0x0b*shiftColBytes[k+8*3] +0x03*shiftColBytes[k+8*4] +0x01*shiftColBytes[k+8*5] +0x05*shiftColBytes[k+8*6] +0x04*shiftColBytes[k+8*7]) % 0xFF);
+               shiftBytes[k+8*6] = (byte)((0x0b*shiftColBytes[k] + 0x07*shiftColBytes[k+8] +0x06*shiftColBytes[k+8*2] +0x08*shiftColBytes[k+8*3] +0x04*shiftColBytes[k+8*4] +0x05*shiftColBytes[k+8*5] +0x01*shiftColBytes[k+8*6] +0x03*shiftColBytes[k+8*7]) % 0xFF);
+               shiftBytes[k+8*7] = (byte)((0x07*shiftColBytes[k] + 0x0b*shiftColBytes[k+8] +0x08*shiftColBytes[k+8*2] +0x06*shiftColBytes[k+8*3] +0x05*shiftColBytes[k+8*4] +0x04*shiftColBytes[k+8*5] +0x03*shiftColBytes[k+8*6] +0x01*shiftColBytes[k+8*7]) % 0xFF);
+            }
          
          //round step 4: Apply Key 
             byte keymatrix[] = keygen(TSPbyte);
             for(int k = 0; k < 64; k++)
             {
-               bytes[k] = (byte)(shiftColBytes[k] ^ keymatrix[k]);
+               bytes[k] = (byte)(shiftBytes[k] ^ keymatrix[k]); // ^ bytes[k]
             }
             /*
             System.out.println();
